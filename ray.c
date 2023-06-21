@@ -8,11 +8,14 @@
 
 #include "raylib.h"
 
-int main(void) {
+int main(int argc, char **argv) {
+    if (argc != 2) {
+        return 0;
+    }
     const int screenWidth  = 1280;
     const int screenHeight = 720;
 
-    InitWindow(screenWidth, screenHeight, "FFMPEG Video Player");
+    InitWindow(screenWidth, screenHeight, "RayPlayer");
     SetWindowState(FLAG_WINDOW_RESIZABLE);
 
     Image img                          = {0};
@@ -22,32 +25,40 @@ int main(void) {
     AVFormatContext   *pFormatCtx      = avformat_alloc_context();
     struct SwsContext *img_convert_ctx = sws_alloc_context();
     struct SwsContext *sws_ctx         = NULL;
-    avformat_open_input(&pFormatCtx, "video.mp4", NULL, NULL);
+    avformat_open_input(&pFormatCtx, argv[1], NULL, NULL);
     TraceLog(LOG_INFO, "CODEC: Format %s", pFormatCtx->iformat->long_name);
     avformat_find_stream_info(pFormatCtx, NULL);
-    AVStream          *stream    = NULL;
-    AVCodecParameters *par       = NULL;
-    AVFrame           *pRGBFrame = NULL;
+    AVStream          *videoStream = NULL;
+    AVStream          *audioStream = NULL;
+    AVCodecParameters *videoPar    = NULL;
+    AVCodecParameters *audioPar    = NULL;
+    AVFrame           *pRGBFrame   = NULL;
     for (int i = 0; i < pFormatCtx->nb_streams; i++) {
-        stream = pFormatCtx->streams[i];
-        par    = stream->codecpar;
-        if (par->codec_type != AVMEDIA_TYPE_VIDEO) {
+        AVStream          *tmpStream = pFormatCtx->streams[i];
+        AVCodecParameters *tmpPar    = tmpStream->codecpar;
+        if (tmpPar->codec_type == AVMEDIA_TYPE_AUDIO) {
+            audioStream = tmpStream;
+            audioPar    = tmpPar;
+            TraceLog(LOG_INFO, "CODEC: Audio sample rate %d, channels: %d", audioPar->sample_rate,
+                     audioPar->ch_layout.nb_channels);
             continue;
         }
-        if (par->codec_type == AVMEDIA_TYPE_VIDEO) {
-            TraceLog(LOG_INFO, "CODEC: Resolution %d x %d, Type: %d", par->width, par->height,
-                     par->codec_id);
-            break;
+        if (tmpPar->codec_type == AVMEDIA_TYPE_VIDEO) {
+            videoStream = tmpStream;
+            videoPar    = tmpPar;
+            TraceLog(LOG_INFO, "CODEC: Resolution %d x %d, type: %d", videoPar->width,
+                     videoPar->height, videoPar->codec_id);
+            continue;
         }
     }
-    const AVCodec *codec = avcodec_find_decoder(par->codec_id);
-    TraceLog(LOG_INFO, "CODEC: %s ID %d, Bit rate %ld", codec->name, codec->id, par->bit_rate);
-    TraceLog(LOG_INFO, "FPS: %d/%d, TBR: %d/%d, TimeBase: %d/%d", stream->avg_frame_rate.num,
-             stream->avg_frame_rate.den, stream->r_frame_rate.num, stream->r_frame_rate.den,
-             stream->time_base.num, stream->time_base.den);
+    const AVCodec *codec = avcodec_find_decoder(videoPar->codec_id);
+    TraceLog(LOG_INFO, "CODEC: %s ID %d, Bit rate %ld", codec->name, codec->id, videoPar->bit_rate);
+    TraceLog(LOG_INFO, "FPS: %d/%d, TBR: %d/%d, TimeBase: %d/%d", videoStream->avg_frame_rate.num,
+             videoStream->avg_frame_rate.den, videoStream->r_frame_rate.num,
+             videoStream->r_frame_rate.den, videoStream->time_base.num, videoStream->time_base.den);
 
     AVCodecContext *codecCtx = avcodec_alloc_context3(codec);
-    avcodec_parameters_to_context(codecCtx, par);
+    avcodec_parameters_to_context(codecCtx, videoPar);
     avcodec_open2(codecCtx, codec, NULL);
 
     AVFrame  *frame  = av_frame_alloc();
@@ -61,11 +72,11 @@ int main(void) {
     texture = LoadTextureFromImage(img);
     UnloadImage(img);
 
-    SetTargetFPS(stream->avg_frame_rate.num / stream->avg_frame_rate.den);
+    SetTargetFPS(videoStream->avg_frame_rate.num / videoStream->avg_frame_rate.den);
 
     while (!WindowShouldClose()) {
         while (av_read_frame(pFormatCtx, packet) >= 0) {
-            if (packet->stream_index == stream->index) {
+            if (packet->stream_index == videoStream->index) {
                 // Getting frame from video
                 int packet_rec = avcodec_send_packet(codecCtx, packet);
                 int frame_rec  = avcodec_receive_frame(codecCtx, frame);
