@@ -1,6 +1,6 @@
-all: videotest ray
+all: video ray
 
-videotest: test/video.c
+video: test/video.c
 	clang -g -fsanitize=address,leak,undefined,integer,bounds,float-divide-by-zero,float-cast-overflow -fno-omit-frame-pointer -fno-sanitize-recover=all -o check-asan-lsan-ubsan test/video.c -lavformat -lavcodec -lavutil -lswscale -g -o video
 
 ray: ray.c

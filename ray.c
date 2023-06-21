@@ -11,7 +11,7 @@
 int main(void) {
     const int screenWidth  = 1280;
     const int screenHeight = 720;
-    
+
     InitWindow(screenWidth, screenHeight, "FFMPEG Video Player");
     SetWindowState(FLAG_WINDOW_RESIZABLE);
 
@@ -36,8 +36,8 @@ int main(void) {
             continue;
         }
         if (par->codec_type == AVMEDIA_TYPE_VIDEO) {
-            TraceLog(LOG_INFO, "CODEC: Resolution %d x %d, Type: %d", par->width,
-                     par->height, par->codec_id);
+            TraceLog(LOG_INFO, "CODEC: Resolution %d x %d, Type: %d", par->width, par->height,
+                     par->codec_id);
             break;
         }
     }
@@ -58,7 +58,7 @@ int main(void) {
     texture = LoadTextureFromImage(img);
     UnloadImage(img);
 
-    SetTargetFPS(50);
+    SetTargetFPS(60);
 
     while (!WindowShouldClose()) {
         while (av_read_frame(pFormatCtx, packet) >= 0) {
@@ -68,6 +68,7 @@ int main(void) {
                 avcodec_receive_frame(codecCtx, frame);
                 // Convert the image from its native format to RGB
                 // You must create new buffer for RGB data
+                TraceLog(LOG_INFO, "CODEC: Frame PTS: %ld", frame->pts);
                 pRGBFrame = av_frame_alloc();
 
                 pRGBFrame->format = AV_PIX_FMT_RGB24;
