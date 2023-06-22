@@ -5,7 +5,7 @@
 #include <libswresample/swresample.h>
 #include <stdio.h>
 #include <ao/ao.h>
-static int audio_resampling(  // 1
+int audio_resampling(  // 1
     AVCodecContext *audio_decode_ctx, AVFrame *decoded_audio_frame,
     enum AVSampleFormat out_sample_fmt, int out_channels, int out_sample_rate, uint8_t *out_buf) {
     SwrContext     *swr_ctx             = NULL;
@@ -163,7 +163,7 @@ int main(void) {
     ao_sample_format sformat;
     //
     AVFormatContext *pFormatCtx = avformat_alloc_context();
-    avformat_open_input(&pFormatCtx, "../video.mp4", NULL, NULL);
+    avformat_open_input(&pFormatCtx, "video.mp4", NULL, NULL);
     avformat_find_stream_info(pFormatCtx, NULL);
     AVStream          *stream = NULL;
     AVCodecParameters *par    = NULL;
