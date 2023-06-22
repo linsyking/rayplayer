@@ -1,0 +1,7 @@
+*.mp4
+*.mp3
+_build/
+ray
+video
+audio
+rayaudio

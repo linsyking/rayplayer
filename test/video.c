@@ -9,7 +9,7 @@ int main(void) {
     AVFormatContext   *pFormatCtx      = avformat_alloc_context();
     struct SwsContext *img_convert_ctx = sws_alloc_context();
     struct SwsContext *sws_ctx         = NULL;
-    avformat_open_input(&pFormatCtx, "video.mp4", NULL, NULL);
+    avformat_open_input(&pFormatCtx, "../video.mp4", NULL, NULL);
     avformat_find_stream_info(pFormatCtx, NULL);
     AVStream          *stream    = NULL;
     AVCodecParameters *par       = NULL;
@@ -35,11 +35,19 @@ int main(void) {
     sws_ctx = sws_getContext(codecCtx->width, codecCtx->height, codecCtx->pix_fmt, codecCtx->width,
                              codecCtx->height, AV_PIX_FMT_RGB24, SWS_FAST_BILINEAR, 0, 0, 0);
 
+    pRGBFrame = av_frame_alloc();
+
+    pRGBFrame->format = AV_PIX_FMT_RGB24;
+    pRGBFrame->width  = codecCtx->width;
+    pRGBFrame->height = codecCtx->height;
+    av_frame_get_buffer(pRGBFrame, 0);
     while (av_read_frame(pFormatCtx, packet) >= 0) {
         if (packet->stream_index == stream->index) {
             // Getting frame from video
             int packet_rec = avcodec_send_packet(codecCtx, packet);
-            int frame_rec  = avcodec_receive_frame(codecCtx, frame);
+            av_packet_unref(packet);
+            int frame_rec = avcodec_receive_frame(codecCtx, frame);
+
             if (packet_rec < 0 || frame_rec < 0) {
                 // Error
                 av_packet_unref(packet);
@@ -47,23 +55,16 @@ int main(void) {
             }
             // Convert the image from its native format to RGB
             // You must create new buffer for RGB data
-            // TraceLog(LOG_INFO, "CODEC: Frame PTS: %ld", frame->pts);
-            pRGBFrame = av_frame_alloc();
-
-            pRGBFrame->format = AV_PIX_FMT_RGB24;
-            pRGBFrame->width  = frame->width;
-            pRGBFrame->height = frame->height;
-            av_frame_get_buffer(pRGBFrame, 0);
 
             sws_scale(sws_ctx, (uint8_t const *const *)frame->data, frame->linesize, 0,
                       frame->height, pRGBFrame->data, pRGBFrame->linesize);
-            av_frame_free(&pRGBFrame);
             break;
         }
         av_packet_unref(packet);
     }
 
     av_frame_free(&frame);
+    av_frame_free(&pRGBFrame);
     av_packet_unref(packet);
     av_packet_free(&packet);
     avcodec_free_context(&codecCtx);
