@@ -40,7 +40,7 @@ int audio_resampling(AVCodecContext *audio_decode_ctx, AVFrame *decoded_audio_fr
         return -1;
     }
 
-    swr_alloc_set_opts2(&swr_ctx,  // 2
+    swr_alloc_set_opts2(&swr_ctx,
                         &out_channel_layout, out_sample_fmt, out_sample_rate, &in_channel_layout,
                         audio_decode_ctx->sample_fmt, audio_decode_ctx->sample_rate, 0, NULL);
 
@@ -106,7 +106,7 @@ int audio_resampling(AVCodecContext *audio_decode_ctx, AVFrame *decoded_audio_fr
     if (swr_ctx) {
         // do the actual audio data resampling
         ret = swr_convert(swr_ctx, resampled_data, out_nb_samples,
-                          (const uint8_t **)decoded_audio_frame->data,
+                          (const uint8_t **)decoded_audio_frame->extended_data,
                           decoded_audio_frame->nb_samples);
 
         // check audio conversion was successful

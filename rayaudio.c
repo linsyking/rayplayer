@@ -39,11 +39,11 @@ void AudioInputCallback(void *buffer, unsigned int frames) {
     audioFrequency = frequency + (audioFrequency - frequency) * 0.95f;
     audioFrequency += 1.0f;
     audioFrequency -= 1.0f;
-    float  incr = audioFrequency / 44100.0f;
-    float *d    = (float *)buffer;
+    float               incr        = audioFrequency / 44100.0f;
+    float              *d           = (float *)buffer;
     static unsigned int framesTotal = 0;
     framesTotal++;
-    printf("frame: %d\n", framesTotal);
+    printf("frame: %d\n", frames);
 
     for (unsigned int i = 0; i < frames; i++) {
         d[i] = (float)(32000.0f * sinf(2 * PI * sineIdx));
@@ -70,6 +70,8 @@ int main(void) {
 
     // Init raw audio stream (sample rate: 44100, sample size: 32bit-short, channels: 1-mono)
     AudioStream stream = LoadAudioStream(44100, 32, 1);
+
+    SetAudioStreamBufferSizeDefault(4096 * 4);
 
     SetAudioStreamCallback(stream, AudioInputCallback);
 

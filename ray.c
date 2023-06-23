@@ -8,9 +8,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "audio.h"
-
-#define AUDIO_BUFFER_SIZE 4096
 
 typedef struct AVList {
     AVPacket       self;
@@ -111,18 +108,24 @@ int audio_decode_frame(uint8_t *buf) {
         return -1;
     }
     // Got frame
-    int size = audio_resampling(pq.codecCtx, frame, AV_SAMPLE_FMT_S32, 1, 44100, buf);
-    // memcpy(buf, frame->extended_data[0], 4096);
-    printf("size = %d\n", size);
+    uint f_size = frame->linesize[0];
+    uint b_ch = f_size / pq.codecCtx->ch_layout.nb_channels;
+    // for (uint lw = 0; lw < b_ch; ++lw) {
+    //     for (uint ch = 0; ch < pq.codecCtx->ch_layout.nb_channels; ++ch) {
+    //         buf[ch + lw * 2] = frame->extended_data[ch][lw];
+    //     }
+    // }
+    memcpy(buf, frame->extended_data[0], b_ch);
 
     av_frame_free(&frame);
     av_packet_unref(&packet);
-    return size;
+    return b_ch;
 }
 
 void audio_callback(void *buffer, unsigned int frames) {
-    uint8_t            *dbuf = (uint8_t *)buffer;
-    static uint8_t      audio_buf[192000 << 1];
+    uint8_t            *origin = (uint8_t *)buffer;
+    uint8_t            *dbuf   = (uint8_t *)buffer;
+    static uint8_t      audio_buf[192000];
     static unsigned int audio_buf_size  = 0;
     static unsigned int audio_buf_index = 0;
     int                 len1            = -1;
@@ -133,7 +136,7 @@ void audio_callback(void *buffer, unsigned int frames) {
             audio_size = audio_decode_frame(audio_buf);
             if (audio_size < 0) {
                 // output silence
-                printf("audio_decode_frame() failed.\n");
+                printf("Skipped one frame.\n");
                 continue;
             } else {
                 audio_buf_size = audio_size;
@@ -147,11 +150,6 @@ void audio_callback(void *buffer, unsigned int frames) {
         }
 
         memcpy(dbuf, audio_buf + audio_buf_index, len1);
-        // printf("%d, %d, %d\n", audio_size, audio_buf_size, audio_buf_index);
-        // printf("%d, %d\n", len1, len);
-        // for (uint j = 0; j < len1/sizeof(float); ++j) {
-        //     (dbuf)[j] = audio_buf[audio_buf_index/sizeof(float) + j];
-        // }
 
         len -= len1;
         dbuf += len1;
@@ -159,7 +157,8 @@ void audio_callback(void *buffer, unsigned int frames) {
     }
     static unsigned int framesTotal = 0;
     framesTotal++;
-    printf("frame: %d\n", framesTotal);
+    // printf("frame: %d\n", framesTotal);
+    // printf("ret: %d, %d\n", origin[0], origin[1]);
 }
 
 int main(int argc, char **argv) {
@@ -173,7 +172,6 @@ int main(int argc, char **argv) {
     SetWindowState(FLAG_WINDOW_RESIZABLE);
     InitAudioDevice();
     init_pq();
-    SetAudioStreamBufferSizeDefault(AUDIO_BUFFER_SIZE);
 
     if (argc >= 3) {
         const char *option = argv[2];
@@ -256,7 +254,8 @@ int main(int argc, char **argv) {
         rlLoadTexture(NULL, texture.width, texture.height, texture.format, texture.mipmaps);
     SetTargetFPS(videoStream->avg_frame_rate.num / videoStream->avg_frame_rate.den);
 
-    AudioStream rayAStream = LoadAudioStream(audioCodecCtx->sample_rate, 32, 1);
+    AudioStream rayAStream =
+        LoadAudioStream(audioCodecCtx->sample_rate, 32, 1);
     SetAudioStreamCallback(rayAStream, audio_callback);
     PlayAudioStream(rayAStream);
     pRGBFrame         = av_frame_alloc();
@@ -290,7 +289,6 @@ int main(int argc, char **argv) {
                 // Getting audio data from audio
                 AVPacket *cloned = av_packet_clone(packet);
                 pq_put(*cloned);
-                // break;
             }
             av_packet_unref(packet);
         }
