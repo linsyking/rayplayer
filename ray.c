@@ -151,10 +151,6 @@ void audio_callback(void *buffer, unsigned int frames) {
         dbuf += len1;
         audio_buf_index += len1;
     }
-    static unsigned int framesTotal = 0;
-    framesTotal++;
-    // printf("frame: %d\n", framesTotal);
-    // printf("ret: %d, %d\n", origin[0], origin[1]);
 }
 
 int main(int argc, char **argv) {
@@ -298,7 +294,6 @@ int main(int argc, char **argv) {
 
         EndDrawing();
     }
-
     UnloadTexture(texture);
     UnloadAudioStream(rayAStream);
 
