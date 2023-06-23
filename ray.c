@@ -40,6 +40,7 @@ bool pq_empty() {
 }
 
 void pq_put(AVPacket packet) {
+    printf("putting...\n");
     pthread_mutex_lock(&pq.mutex);
     AVList *node = malloc(sizeof(AVList));
     node->self   = packet;
@@ -57,6 +58,7 @@ void pq_put(AVPacket packet) {
 }
 
 AVPacket pq_get() {
+    printf("getting...\n");
     pthread_mutex_lock(&pq.mutex);
     while (pq_empty()) {
         pthread_cond_wait(&pq.cond, &pq.mutex);
@@ -127,6 +129,9 @@ void audio_callback(void *buffer, unsigned int frames) {
     int                 len1            = -1;
     int                 audio_size      = -1;
     int                 len             = frames * sizeof(float) * 2;  // Stereo
+    static int          jj              = 0;
+    ++jj;
+    printf("AFrame: %d, %d\n", jj, pq.size);
     while (len > 0) {
         if (audio_buf_index >= audio_buf_size) {
             audio_size = audio_decode_frame(audio_buf);
@@ -254,10 +259,13 @@ int main(int argc, char **argv) {
     pRGBFrame->width  = videoCodecCtx->width;
     pRGBFrame->height = videoCodecCtx->height;
     av_frame_get_buffer(pRGBFrame, 0);
-
+    int vframe = 0;
     while (!WindowShouldClose()) {
+        vframe++;
+        printf("VFrame %d\n", vframe);
         while (av_read_frame(pFormatCtx, packet) >= 0) {
             if (packet->stream_index == videoStream->index) {
+                printf("Video frame\n");
                 // Getting frame from video
                 int ret = avcodec_send_packet(videoCodecCtx, packet);
                 av_packet_unref(packet);
@@ -278,6 +286,7 @@ int main(int argc, char **argv) {
                 break;
             } else if (packet->stream_index == audioStream->index) {
                 // Getting audio data from audio
+                printf("Audio frame\n");
                 AVPacket *cloned = av_packet_clone(packet);
                 pq_put(*cloned);
             }
