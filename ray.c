@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "audio.h"
 
 typedef struct AVList {
     AVPacket       self;
@@ -109,17 +110,12 @@ int audio_decode_frame(uint8_t *buf) {
     }
     // Got frame
     uint f_size = frame->linesize[0];
-    uint b_ch = f_size / pq.codecCtx->ch_layout.nb_channels;
-    // for (uint lw = 0; lw < b_ch; ++lw) {
-    //     for (uint ch = 0; ch < pq.codecCtx->ch_layout.nb_channels; ++ch) {
-    //         buf[ch + lw * 2] = frame->extended_data[ch][lw];
-    //     }
-    // }
-    memcpy(buf, frame->extended_data[0], b_ch);
+    uint b_ch   = f_size / pq.codecCtx->ch_layout.nb_channels;
+    int  res    = audio_resampling(pq.codecCtx, frame, AV_SAMPLE_FMT_FLT, 2, 44100, buf);
 
     av_frame_free(&frame);
     av_packet_unref(&packet);
-    return b_ch;
+    return res;
 }
 
 void audio_callback(void *buffer, unsigned int frames) {
@@ -130,7 +126,7 @@ void audio_callback(void *buffer, unsigned int frames) {
     static unsigned int audio_buf_index = 0;
     int                 len1            = -1;
     int                 audio_size      = -1;
-    int                 len             = frames * sizeof(float);
+    int                 len             = frames * sizeof(float) * 2;  // Stereo
     while (len > 0) {
         if (audio_buf_index >= audio_buf_size) {
             audio_size = audio_decode_frame(audio_buf);
@@ -254,8 +250,7 @@ int main(int argc, char **argv) {
         rlLoadTexture(NULL, texture.width, texture.height, texture.format, texture.mipmaps);
     SetTargetFPS(videoStream->avg_frame_rate.num / videoStream->avg_frame_rate.den);
 
-    AudioStream rayAStream =
-        LoadAudioStream(audioCodecCtx->sample_rate, 32, 1);
+    AudioStream rayAStream = LoadAudioStream(44100, 32, 2);
     SetAudioStreamCallback(rayAStream, audio_callback);
     PlayAudioStream(rayAStream);
     pRGBFrame         = av_frame_alloc();
