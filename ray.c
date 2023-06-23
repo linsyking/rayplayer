@@ -106,10 +106,7 @@ void audio_callback(void *buffer, unsigned int frames) {
     int                 len             = frames * sizeof(float) * 2;  // Stereo
     static int jj = 0;
     ++jj;
-    printf("frames %d\n", jj);
-    if (jj >= 100) {
-        return;
-    }
+    printf("frame %d, size %d\n", jj, pq.size);
     while (len > 0) {
         if (audio_buf_index >= audio_buf_size) {
             audio_size = audio_decode_frame(audio_buf);

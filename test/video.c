@@ -37,10 +37,17 @@ static void dofile(const char *fname, const THEORAPLAY_VideoFormat vidfmt) {
         audio = THEORAPLAY_getAudio(decoder);
         if (audio) {
             printf("Got %d frames of audio (%u ms)!\n", audio->frames, audio->playms);
-            static sint_32 buf[12000];
-            
 
             ao_play(adevice, (char *)audio->samples, audio->frames * 4 * 2);
+            float *ss = (float *)audio->samples;
+            for (uint i = 0; i < audio->frames; ++i) {
+                printf("%f ", ss[i]);
+            }
+            printf("new\n");
+            for (uint i = 0; i < audio->frames; ++i) {
+                printf("%f ", ss[audio->frames + i]);
+            }
+            break;
             THEORAPLAY_freeAudio(audio);
         }  // if
 
