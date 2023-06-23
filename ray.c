@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "theoraplay.h"
+#include <unistd.h>
 
 typedef struct PList {
     const THEORAPLAY_AudioPacket *packet;
@@ -104,9 +105,9 @@ void audio_callback(void *buffer, unsigned int frames) {
     int                 len1            = -1;
     int                 audio_size      = -1;
     int                 len             = frames * sizeof(float) * 2;  // Stereo
-    static int jj = 0;
+    static int          jj              = 0;
     ++jj;
-    printf("frame %d, size %d\n", jj, pq.size);
+    printf("AFrame %d, size %d\n", jj, pq.size);
     while (len > 0) {
         if (audio_buf_index >= audio_buf_size) {
             audio_size = audio_decode_frame(audio_buf);
@@ -120,6 +121,7 @@ void audio_callback(void *buffer, unsigned int frames) {
             audio_buf_index = 0;
         }
         len1 = audio_buf_size - audio_buf_index;
+        printf("require %d, available %d\n", len, len1);
 
         if (len1 > len) {
             len1 = len;
@@ -131,6 +133,8 @@ void audio_callback(void *buffer, unsigned int frames) {
         dbuf += len1;
         audio_buf_index += len1;
     }
+    // usleep(1000);
+    // sleep(1);
 }
 
 int main(int argc, char **argv) {
