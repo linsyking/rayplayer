@@ -125,7 +125,7 @@ int audio_decode_frame(uint8_t *buf) {
 void audio_callback(void *buffer, unsigned int frames) {
     uint8_t            *origin = (uint8_t *)buffer;
     uint8_t            *dbuf   = (uint8_t *)buffer;
-    static uint8_t      audio_buf[192000];
+    static uint8_t      audio_buf[19200];
     static unsigned int audio_buf_size  = 0;
     static unsigned int audio_buf_index = 0;
     int                 len1            = -1;

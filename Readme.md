@@ -19,7 +19,7 @@ sudo pacman -S --needed raylib ffmpeg
 
 ## Build
 
-To build the player, type:
+To build the player:
 
 ```bash
 make ray

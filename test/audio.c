@@ -56,7 +56,9 @@ int main(void) {
                 continue;
             }
             while (avcodec_receive_frame(codecCtx, frame) >= 0) {
+                printf("tt: %d, %d\n", frame->extended_data[0][0], frame->extended_data[0][1]);
                 int ret = audio_resampling(codecCtx, frame, AV_SAMPLE_FMT_S32, 1, 44100, buf);
+                printf("re: %d, %d\n", buf[0], buf[1]);
                 ao_play(adevice, (char *)buf, ret);
             }
         }
