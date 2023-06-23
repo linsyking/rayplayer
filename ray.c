@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "theoraplay.h"
-#include <unistd.h>
 
 typedef struct PList {
     const THEORAPLAY_AudioPacket *packet;
@@ -87,12 +86,7 @@ int audio_decode_frame(uint8_t *buf) {
     float                        *db     = (float *)buf;
     const THEORAPLAY_AudioPacket *packet = pq_get();
     size_t                        sz     = packet->frames * sizeof(float) * 2;
-    // printf("size %ld\n", sz);
     memcpy((float *)buf, packet->samples, sz);
-    // for (uint j = 0; j < packet->frames * 2; ++j) {
-    //     db[j] = packet->samples[j];
-    // }
-
     THEORAPLAY_freeAudio(packet);
     return sz;
 }
@@ -107,7 +101,6 @@ void audio_callback(void *buffer, unsigned int frames) {
     int                 len             = frames * sizeof(float) * 2;  // Stereo
     static int          jj              = 0;
     ++jj;
-    printf("AFrame %d, size %d\n", jj, pq.size);
     while (len > 0) {
         if (audio_buf_index >= audio_buf_size) {
             audio_size = audio_decode_frame(audio_buf);
@@ -121,7 +114,6 @@ void audio_callback(void *buffer, unsigned int frames) {
             audio_buf_index = 0;
         }
         len1 = audio_buf_size - audio_buf_index;
-        printf("require %d, available %d\n", len, len1);
 
         if (len1 > len) {
             len1 = len;
@@ -133,8 +125,6 @@ void audio_callback(void *buffer, unsigned int frames) {
         dbuf += len1;
         audio_buf_index += len1;
     }
-    // usleep(1000);
-    // sleep(1);
 }
 
 int main(int argc, char **argv) {
@@ -189,7 +179,7 @@ int main(int argc, char **argv) {
                     texture.id = rlLoadTexture(NULL, texture.width, texture.height, texture.format,
                                                texture.mipmaps);
                     texture_status = 1;
-                    SetTargetFPS(video->fps);
+                    // SetTargetFPS(video->fps);
                 }
                 UpdateTexture(texture, video->pixels);
                 THEORAPLAY_freeVideo(video);
@@ -197,7 +187,6 @@ int main(int argc, char **argv) {
 
             audio = THEORAPLAY_getAudio(decoder);
             if (audio) {
-                // printf("putting...\n");
                 pq_put(audio);
                 break;
             }
