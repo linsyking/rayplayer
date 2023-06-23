@@ -1,16 +1,10 @@
 all: video ray audio rayaudio
 
 video: test/video.c
-	clang -g -fsanitize=address,leak,undefined,integer,bounds,float-divide-by-zero,float-cast-overflow -fno-omit-frame-pointer -fno-sanitize-recover=all test/video.c -lavformat -lavcodec -lavutil -lswscale -o video
+	gcc test/video.c theoraplay.c -logg -lvorbis -ltheoradec -lao -o video
 
-audio: test/audio.c
-	clang test/audio.c audio.c -lavformat -lavcodec -lavutil -lswscale -lao -lswresample -o audio
+video-test: test/video.c
+	clang -g -fsanitize=address,leak,undefined,integer,bounds,float-divide-by-zero,float-cast-overflow -fno-omit-frame-pointer -fno-sanitize-recover=all test/video.c theoraplay.c -logg -lvorbis -ltheoradec -o video
 
-ray: ray.c audio.c
-	gcc ray.c audio.c -lraylib -lavformat -lavcodec -lavutil -lswscale -lm -lswresample -o ray
-
-rayaudio: rayaudio.c
-	gcc rayaudio.c -lraylib -lavformat -lavcodec -lavutil -lswscale -lm -o rayaudio
-
-ray-test: ray.c
-	clang -g -fsanitize=address,leak,undefined,integer,bounds,float-divide-by-zero,float-cast-overflow -fno-omit-frame-pointer -fno-sanitize-recover=all -lraylib -lavformat -lavcodec -lavutil -lswscale ray.c -o ray
+ray: ray.c
+	gcc ray.c theoraplay.c -lraylib -logg -lvorbis -ltheoradec -o ray

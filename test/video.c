@@ -1,74 +1,78 @@
-#include <libavcodec/avcodec.h>
-#include <libavformat/avformat.h>
-#include <libswscale/swscale.h>
+/**
+ * TheoraPlay; multithreaded Ogg Theora/Ogg Vorbis decoding.
+ *
+ * Please see the file LICENSE.txt in the source's root directory.
+ *
+ *  This file written by Ryan C. Gordon.
+ */
+
 #include <stdio.h>
+#include <unistd.h>
+#include <string.h>
+#include "../theoraplay.h"
+#include <ao/ao.h>
 
-int main(void) {
-    const int          screenWidth     = 1280;
-    const int          screenHeight    = 720;
-    AVFormatContext   *pFormatCtx      = avformat_alloc_context();
-    struct SwsContext *img_convert_ctx = sws_alloc_context();
-    struct SwsContext *sws_ctx         = NULL;
-    avformat_open_input(&pFormatCtx, "../video.mp4", NULL, NULL);
-    avformat_find_stream_info(pFormatCtx, NULL);
-    AVStream          *stream    = NULL;
-    AVCodecParameters *par       = NULL;
-    AVFrame           *pRGBFrame = NULL;
-    for (int i = 0; i < pFormatCtx->nb_streams; i++) {
-        stream = pFormatCtx->streams[i];
-        par    = stream->codecpar;
-        if (par->codec_type != AVMEDIA_TYPE_VIDEO) {
+static void dofile(const char *fname, const THEORAPLAY_VideoFormat vidfmt) {
+    ao_initialize();
+    int              driver = ao_default_driver_id();
+    ao_sample_format sformat;
+    sformat.byte_format                   = AO_FMT_NATIVE;
+    sformat.channels                      = 2;
+    sformat.rate                          = 44100;
+    sformat.bits                          = 32;
+    ao_device                    *adevice = ao_open_live(driver, &sformat, NULL);
+    THEORAPLAY_Decoder           *decoder = NULL;
+    const THEORAPLAY_VideoFrame  *video   = NULL;
+    const THEORAPLAY_AudioPacket *audio   = NULL;
+
+    printf("Trying file '%s' ...\n", fname);
+    decoder = THEORAPLAY_startDecodeFile(fname, 30, vidfmt);
+    while (THEORAPLAY_isDecoding(decoder)) {
+        video = THEORAPLAY_getVideo(decoder);
+        if (video) {
+            printf("Got video frame (%u ms)!\n", video->playms);
+            THEORAPLAY_freeVideo(video);
+        }  // if
+
+        audio = THEORAPLAY_getAudio(decoder);
+        if (audio) {
+            printf("Got %d frames of audio (%u ms)!\n", audio->frames, audio->playms);
+            static sint_32 buf[12000];
+            
+
+            ao_play(adevice, (char *)audio->samples, audio->frames * 4 * 2);
+            THEORAPLAY_freeAudio(audio);
+        }  // if
+
+        if (!video && !audio)
             continue;
-        }
-        if (par->codec_type == AVMEDIA_TYPE_VIDEO) {
-            break;
-        }
-    }
-    const AVCodec *codec = avcodec_find_decoder(par->codec_id);
+    }  // while
 
-    AVCodecContext *codecCtx = avcodec_alloc_context3(codec);
-    avcodec_parameters_to_context(codecCtx, par);
-    avcodec_open2(codecCtx, codec, NULL);
+    if (THEORAPLAY_decodingError(decoder))
+        printf("There was an error decoding this file!\n");
+    else
+        printf("done with this file!\n");
 
-    AVFrame  *frame  = av_frame_alloc();
-    AVPacket *packet = av_packet_alloc();
-    sws_ctx = sws_getContext(codecCtx->width, codecCtx->height, codecCtx->pix_fmt, codecCtx->width,
-                             codecCtx->height, AV_PIX_FMT_RGB24, SWS_FAST_BILINEAR, 0, 0, 0);
+    THEORAPLAY_stopDecode(decoder);
+    ao_shutdown();
+}  // dofile
 
-    pRGBFrame = av_frame_alloc();
+int main(int argc, char **argv) {
+    THEORAPLAY_VideoFormat vidfmt = THEORAPLAY_VIDFMT_YV12;
 
-    pRGBFrame->format = AV_PIX_FMT_RGB24;
-    pRGBFrame->width  = codecCtx->width;
-    pRGBFrame->height = codecCtx->height;
-    av_frame_get_buffer(pRGBFrame, 0);
-    while (av_read_frame(pFormatCtx, packet) >= 0) {
-        if (packet->stream_index == stream->index) {
-            // Getting frame from video
-            int packet_rec = avcodec_send_packet(codecCtx, packet);
-            av_packet_unref(packet);
-            int frame_rec = avcodec_receive_frame(codecCtx, frame);
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "--rgb") == 0)
+            vidfmt = THEORAPLAY_VIDFMT_RGB;
+        else if (strcmp(argv[i], "--rgba") == 0)
+            vidfmt = THEORAPLAY_VIDFMT_RGBA;
+        else if (strcmp(argv[i], "--yv12") == 0)
+            vidfmt = THEORAPLAY_VIDFMT_YV12;
+        else
+            dofile(argv[i], vidfmt);
+    }  // for
 
-            if (packet_rec < 0 || frame_rec < 0) {
-                // Error
-                av_packet_unref(packet);
-                continue;
-            }
-            // Convert the image from its native format to RGB
-            // You must create new buffer for RGB data
-
-            sws_scale(sws_ctx, (uint8_t const *const *)frame->data, frame->linesize, 0,
-                      frame->height, pRGBFrame->data, pRGBFrame->linesize);
-            break;
-        }
-        av_packet_unref(packet);
-    }
-
-    av_frame_free(&frame);
-    av_frame_free(&pRGBFrame);
-    av_packet_unref(packet);
-    av_packet_free(&packet);
-    avcodec_free_context(&codecCtx);
-    sws_freeContext(sws_ctx);
-    avformat_close_input(&pFormatCtx);
+    printf("done all files!\n");
     return 0;
-}
+}  // main
+
+// end of testtheoraplay.c ...
