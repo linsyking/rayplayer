@@ -9,7 +9,7 @@ int main(void) {
     AVFormatContext   *pFormatCtx      = avformat_alloc_context();
     struct SwsContext *img_convert_ctx = sws_alloc_context();
     struct SwsContext *sws_ctx         = NULL;
-    avformat_open_input(&pFormatCtx, "../video.mp4", NULL, NULL);
+    avformat_open_input(&pFormatCtx, "video.mp4", NULL, NULL);
     avformat_find_stream_info(pFormatCtx, NULL);
     AVStream          *stream    = NULL;
     AVCodecParameters *par       = NULL;
