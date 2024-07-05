@@ -112,8 +112,8 @@ int audio_decode_frame(uint8_t *buf) {
     }
     // Got frame
     uint f_size = frame->linesize[0];
-    uint b_ch   = f_size / pq.codecCtx->ch_layout.nb_channels;
-    int  res    = audio_resampling(pq.codecCtx, frame, AV_SAMPLE_FMT_FLT, 2, 44100, buf);
+    uint b_ch = f_size / av_get_channel_layout_nb_channels(pq.codecCtx->channel_layout);
+   int  res    = audio_resampling(pq.codecCtx, frame, AV_SAMPLE_FMT_FLT, 2, 44100, buf);
 
     av_frame_free(&frame);
     av_packet_unref(&packet);
@@ -201,7 +201,7 @@ int main(int argc, char **argv) {
             audioStream = tmpStream;
             audioPar    = tmpPar;
             TraceLog(LOG_INFO, "CODEC: Audio sample rate %d, channels: %d", audioPar->sample_rate,
-                     audioPar->ch_layout.nb_channels);
+                     av_get_channel_layout_nb_channels(audioPar->channel_layout));
             continue;
         }
         if (tmpPar->codec_type == AVMEDIA_TYPE_VIDEO) {

@@ -4,8 +4,8 @@ int audio_resampling(AVCodecContext *audio_decode_ctx, AVFrame *decoded_audio_fr
                      uint8_t *out_buf) {
     SwrContext     *swr_ctx             = NULL;
     int             ret                 = 0;
-    AVChannelLayout in_channel_layout   = audio_decode_ctx->ch_layout;
-    AVChannelLayout out_channel_layout  = AV_CHANNEL_LAYOUT_STEREO;
+    int64_t in_channel_layout   = audio_decode_ctx->channel_layout;
+    int64_t out_channel_layout  = AV_CH_LAYOUT_STEREO;
     int             out_nb_channels     = 0;
     int             out_linesize        = 0;
     int             in_nb_samples       = 0;
@@ -23,13 +23,13 @@ int audio_resampling(AVCodecContext *audio_decode_ctx, AVFrame *decoded_audio_fr
 
     // set output audio channels based on the input audio channels
     if (out_channels == 1) {
-        AVChannelLayout tmp = AV_CHANNEL_LAYOUT_MONO;
+        int64_t tmp = AV_CH_LAYOUT_MONO;
         out_channel_layout  = tmp;
     } else if (out_channels == 2) {
-        AVChannelLayout tmp = AV_CHANNEL_LAYOUT_STEREO;
+        int64_t tmp = AV_CH_LAYOUT_STEREO;
         out_channel_layout  = tmp;
     } else {
-        AVChannelLayout tmp = AV_CHANNEL_LAYOUT_SURROUND;
+        int64_t tmp = AV_CH_LAYOUT_SURROUND;
         out_channel_layout  = tmp;
     }
 
@@ -40,8 +40,8 @@ int audio_resampling(AVCodecContext *audio_decode_ctx, AVFrame *decoded_audio_fr
         return -1;
     }
 
-    swr_alloc_set_opts2(&swr_ctx,
-                        &out_channel_layout, out_sample_fmt, out_sample_rate, &in_channel_layout,
+    swr_alloc_set_opts(swr_ctx,
+                        out_channel_layout, out_sample_fmt, out_sample_rate, in_channel_layout,
                         audio_decode_ctx->sample_fmt, audio_decode_ctx->sample_rate, 0, NULL);
 
     // Once all values have been set for the SwrContext, it must be initialized
@@ -63,7 +63,7 @@ int audio_resampling(AVCodecContext *audio_decode_ctx, AVFrame *decoded_audio_fr
     }
 
     // get number of output audio channels
-    out_nb_channels = out_channel_layout.nb_channels;
+    out_nb_channels = av_get_channel_layout_nb_channels(out_channel_layout);
 
     ret = av_samples_alloc_array_and_samples(&resampled_data, &out_linesize, out_nb_channels,
                                              out_nb_samples, out_sample_fmt, 0);
