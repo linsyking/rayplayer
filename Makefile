@@ -1,5 +1,11 @@
 all: video ray audio rayaudio
 
+libtheorafile.so:
+	make -C Theorafile
+
+raw-decoder:
+	gcc -O2 raw-decoder/main.c -logg -lvorbis -ltheoradec -lao -o video
+
 video: test/video.c
 	gcc test/video.c theoraplay.c -logg -lvorbis -ltheoradec -lao -o video
 
